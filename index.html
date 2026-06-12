@@ -1,29 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta charset="UTF-8">
-<title>COBRONA</title>
+<title>Minhoquinha</title>
 
 <style>
 body {
-  background: blue;
+  background: black;
   color: white;
   text-align: center;
   font-family: Arial;
+  margin: 0;
+}
+
+h1 {
+  margin: 10px 0;
 }
 
 canvas {
   border: 2px solid white;
+  width: 90vw;
+  max-width: 400px;
+  height: auto;
+}
+
+/* CONTROLES MOBILE */
+.controls {
+  margin-top: 15px;
+}
+
+button {
+  font-size: 20px;
+  padding: 15px;
+  margin: 5px;
+  border-radius: 10px;
+  border: none;
+  background: #222;
+  color: white;
+}
+
+button:active {
+  background: #555;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🐍 COBRONA</h1>
-<p>Use as setas | R para reiniciar</p>
+<h1>🐍 Minhoquinha</h1>
+<p>Setas (PC) ou botões (celular) | R ou botão</p>
 
 <canvas id="game" width="400" height="400"></canvas>
+
+<!-- CONTROLES -->
+<div class="controls">
+  <div>
+    <button onclick="setDirection(0,-1)">⬆</button>
+  </div>
+  <div>
+    <button onclick="setDirection(-1,0)">⬅</button>
+    <button onclick="resetGame()">🔄</button>
+    <button onclick="setDirection(1,0)">➡</button>
+  </div>
+  <div>
+    <button onclick="setDirection(0,1)">⬇</button>
+  </div>
+</div>
 
 <script>
 const canvas = document.getElementById("game");
@@ -33,7 +76,45 @@ const grid = 20;
 
 let snake, dx, dy, food, score, started, gameOverState;
 
-// ✅ FUNÇÃO DE RESET (SEM RECARREGAR)
+let touchStartX = 0;
+let touchStartY = 0;
+
+canvas.addEventListener("touchstart", function(e) {
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+});
+
+canvas.addEventListener("touchmove", function(e) {
+  if (gameOverState) return;
+
+  const touch = e.touches[0];
+
+  let dxTouch = touch.clientX - touchStartX;
+  let dyTouch = touch.clientY - touchStartY;
+
+  if (Math.abs(dxTouch) < 20 && Math.abs(dyTouch) < 20) return;
+
+  if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
+    if (dxTouch > 0) {
+      setDirection(1, 0);
+    } else {
+      setDirection(-1, 0);
+    }
+  } else {
+    if (dyTouch > 0) {
+      setDirection(0, 1);
+    } else {
+      setDirection(0, -1);
+    }
+  }
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+
+}, { passive: true });
+
+// RESET
 function resetGame() {
   snake = [{x: 10, y: 10}];
   dx = 0;
@@ -46,10 +127,22 @@ function resetGame() {
 
 resetGame();
 
-// teclado
+// CONTROLE MOBILE
+function setDirection(x, y) {
+  if (gameOverState) return;
+
+  if (!started) started = true;
+
+  // evitar virar pra trás
+  if (x === -dx && y === -dy) return;
+
+  dx = x;
+  dy = y;
+}
+
+// TECLADO (PC)
 window.addEventListener("keydown", function(e) {
 
-  // reiniciar
   if (e.key === "r" || e.key === "R") {
     resetGame();
     return;
@@ -60,26 +153,20 @@ window.addEventListener("keydown", function(e) {
   if (!started) started = true;
 
   if (e.key === "ArrowUp" && dy === 0) {
-    dx = 0; dy = -1;
+    setDirection(0, -1);
   } else if (e.key === "ArrowDown" && dy === 0) {
-    dx = 0; dy = 1;
+    setDirection(0, 1);
   } else if (e.key === "ArrowLeft" && dx === 0) {
-    dx = -1; dy = 0;
+    setDirection(-1, 0);
   } else if (e.key === "ArrowRight" && dx === 0) {
-    dx = 1; dy = 0;
+    setDirection(1, 0);
   }
-
 });
 
-// loop
+// LOOP
 function game() {
 
-  if (!started && !gameOverState) {
-    draw();
-    return;
-  }
-
-  if (gameOverState) {
+  if (!started || gameOverState) {
     draw();
     return;
   }
@@ -90,10 +177,7 @@ function game() {
   };
 
   // parede
-  if (
-    head.x < 0 || head.x > 19 ||
-    head.y < 0 || head.y > 19
-  ) {
+  if (head.x < 0 || head.x > 19 || head.y < 0 || head.y > 19) {
     gameOverState = true;
   }
 
@@ -125,7 +209,7 @@ function game() {
   draw();
 }
 
-// desenhar
+// DESENHAR
 function draw() {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, 400, 400);
@@ -142,23 +226,21 @@ function draw() {
 
   // score
   ctx.fillStyle = "white";
+  ctx.font = "14px Arial";
   ctx.fillText("Pontos: " + score, 10, 20);
 
-  // estado inicial
   if (!started && !gameOverState) {
-    ctx.fillText("Pressione uma seta", 110, 200);
+    ctx.fillText("Pressione ou toque", 100, 200);
   }
 
-  // GAME OVER BONITO ✅
   if (gameOverState) {
-    ctx.fillStyle = "orange";
-    ctx.font = "30px Arial";
+    ctx.fillStyle = "red";
+    ctx.font = "20px Arial";
     ctx.fillText("GAME OVER", 130, 180);
 
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
     ctx.fillText("Pontos: " + score, 140, 210);
-    ctx.fillText("Pressione R para reiniciar", 90, 240);
   }
 }
 
